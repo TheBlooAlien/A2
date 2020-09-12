@@ -8,7 +8,7 @@ DOCDIR=doc
 $(BINDIR)/%.class:$(SRCDIR)/%.java
 	$(JAVAC) -d $(BINDIR)/ -cp $(BINDIR) $<
 
-CLASSES= Basin.class FindBasin.class FindAllBasins.class FindAllBasinsSeq.class
+CLASSES= Terrain.class Water.class FlowPanel.class Flow.class
 
 CLASS_FILES=$(CLASSES:%.class=$(BINDIR)/%.class)
 
@@ -18,10 +18,12 @@ clean:
 	rm $(BINDIR)/*.class
 	rm $(SRCDIR)/*.class
 run:
-	@java -cp bin FindAllBasins large_in.txt large_out.txt
-	
+	@java -cp bin Flow
+
 git:
 	git push origin master
 
+gitadd:
+	git add *
 doc:
 	javadoc -d $(DOCDIR) src/*.java
