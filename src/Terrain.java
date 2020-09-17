@@ -82,6 +82,12 @@ public class Terrain {
 	
 	// find permuted 2D location from a linear index in the
 	// range [0, dimx*dimy)
+	/*getPermute() and locate() both modify and return values in the loc parameter. 
+	For getPermute() you pass in a linear (flattened) index and get back a permuted
+	(x,y) location stored in loc.
+	*This might be for calculating an array of points that a path will follow, then create a
+	sensible order for it to follow
+	*/
 	void getPermute(int i, int [] loc) { //give it an index value to generate water flow, from linear index i to... location?
 		locate(permute.get(i), loc);
 	}

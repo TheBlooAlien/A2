@@ -1,15 +1,19 @@
 import javax.swing.*;
+import javax.swing.event.MouseInputListener;
 
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.BorderLayout;
+import java.awt.event.MouseListener;
+import java.awt.event.MouseEvent;
 
-public class Flow {
+public class Flow{
 	static long startTime = 0;
 	static int frameX;
 	static int frameY;
 	static FlowPanel fp;
+	static FlowPanel wfp;
 
 	// start timer
 	private static void tick(){
@@ -20,6 +24,32 @@ public class Flow {
 	private static float tock(){
 		return (System.currentTimeMillis() - startTime) / 1000.0f; 
 	}
+
+	/**
+	 * Private innner class for handling mouse events.
+	 */
+	private static class MouseEventListener implements MouseListener{
+		int xClick = -1;
+		int yClick = -1;
+		Water waterdata;
+
+		MouseEventListener(Water waterdata){
+			this.waterdata = waterdata;
+		}
+
+		@Override
+		public void mouseClicked(MouseEvent e) {
+			xClick = e.getX(); //x location of click
+			yClick = e.getY(); //y location of click
+			waterdata.addWater(xClick,yClick);
+		}
+
+		//Empty methods to appease Java gods
+		public void mousePressed(MouseEvent e) { }
+		public void mouseReleased(MouseEvent e) { }
+		public void mouseEntered(MouseEvent e) { }
+		public void mouseExited(MouseEvent e) { }
+	}
 	
 	public static void setupGUI(int frameX,int frameY,Terrain landdata, Water waterdata) { //edit
 		
@@ -28,27 +58,33 @@ public class Flow {
     	frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     	frame.getContentPane().setLayout(new BorderLayout());
     	
-      	JPanel g = new JPanel();
+      	JPanel g = new JPanel();//add things onto this jpanel
         g.setLayout(new BoxLayout(g, BoxLayout.PAGE_AXIS)); 
    
 		fp = new FlowPanel(landdata);
+		wfp = new FlowPanel(waterdata); //Water Flow Panel
 		fp.setPreferredSize(new Dimension(frameX,frameY));
 		g.add(fp);
+		g.add(wfp);
+		g.addMouseListener(new MouseEventListener(waterdata));
 		
-		//adding water overlay here
+		//TODO: adding water overlay here
 
-
+		//TODO: MouseListener and convert clicked on points to co ords, and send to water
 
 		// to do: add a MouseListener, buttons and ActionListeners on those buttons
 	   	
 		JButton resetB = new JButton("Reset");
+		resetB.addActionListener(new ActionListener(){
+			public void actionPerformed(ActionEvent e){
+				waterdata.clear();
+			}
+		});
 
 		JButton pauseB = new JButton("Pause");
 		
 		JButton playB = new JButton("Play");
-
-		JPanel b = new JPanel();
-	    b.setLayout(new BoxLayout(b, BoxLayout.LINE_AXIS));
+		
 		JButton endB = new JButton("End");;
 		// add the listener to the jbutton to handle the "pressed" event
 		endB.addActionListener(new ActionListener(){
@@ -57,6 +93,9 @@ public class Flow {
 				frame.dispose();
 			}
 		});
+
+		JPanel b = new JPanel();
+	    b.setLayout(new BoxLayout(b, BoxLayout.LINE_AXIS));
 		
 		b.add(resetB);
 		b.add(pauseB);
@@ -76,7 +115,7 @@ public class Flow {
 		
 	public static void main(String[] args) {
 		Terrain landdata = new Terrain();
-		Water waterdata = new Water();
+		Water waterdata;
 		
 		// check that number of command line arguments is correct
 		if(args.length != 1)
@@ -88,11 +127,11 @@ public class Flow {
 		// landscape information from file supplied as argument
 		// 
 		landdata.readData(args[0]);
-		waterdata.giveTerrain(landdata);//so a water overlay can be made with same info of Terrain
-		
+		waterdata = new Water(landdata.getDimX(), landdata.getDimY(), landdata);//so a water overlay can be made with same info of Terrain
+
 		frameX = landdata.getDimX();
 		frameY = landdata.getDimY();
-		SwingUtilities.invokeLater(()->setupGUI(frameX, frameY, landdata));
+		SwingUtilities.invokeLater(()->setupGUI(frameX, frameY, landdata, waterdata));
 		
 		// to do: initialise and start simulation
 	}
