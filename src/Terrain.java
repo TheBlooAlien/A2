@@ -87,6 +87,7 @@ public class Terrain {
 	(x,y) location stored in loc.
 	*This might be for calculating an array of points that a path will follow, then create a
 	sensible order for it to follow
+	flattened index = x*y (where y!=0)
 	*/
 	void getPermute(int i, int [] loc) { //give it an index value to generate water flow, from linear index i to... location?
 		locate(permute.get(i), loc);
