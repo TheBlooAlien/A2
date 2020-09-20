@@ -9,7 +9,6 @@ public class FlowThread extends Thread{
     Terrain landdata;
     Water waterdata;
     int start, end;
-    Object lock = new Object();
     static AtomicBoolean isRunning = new AtomicBoolean(true);
     static AtomicBoolean done = new AtomicBoolean(false); //to see if this thread has done one iteration
 
@@ -25,7 +24,7 @@ public class FlowThread extends Thread{
         while (isRunning.get()) {
             done.set(false);//still busy
             if (!(Water.paused.get())) {
-                waterdata.waterFlow(0, landdata.dim(), lock);
+                waterdata.waterFlow(0, landdata.dim());
                 done.set(true);//it's done one iteration
                 
             } 

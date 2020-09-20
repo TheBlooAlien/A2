@@ -1,22 +1,16 @@
 import javax.swing.*;
-import javax.swing.event.MouseInputListener;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.BorderLayout;
 import java.awt.event.MouseListener;
-import java.awt.image.BufferedImage;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.awt.event.MouseEvent;
 
 public class Flow {
 	static long startTime = 0;
 	static int frameX;
 	static int frameY;
-	static AtomicBoolean paused = new AtomicBoolean(false);
 	static FlowPanel fp;
-	static FlowPanel wfp;
-	static int flattenedMap[];
 
 	// start timer
 	private static void tick() {
@@ -45,7 +39,6 @@ public class Flow {
 			xClick = e.getX(); // x location of click
 			yClick = e.getY(); // y location of click
 			waterdata.addWater(xClick, yClick);
-			fp.repaint(); // remove when threadding
 		}
 
 		// Empty methods to appease Java gods
@@ -77,7 +70,6 @@ public class Flow {
 		fp.setLayout(new BorderLayout());
 		fp.setPreferredSize(new Dimension(frameX, frameY));
 		fp.setWater(waterdata);
-		fp.setPauseVar(paused);
 
 		Thread fpt = new Thread(fp);// make 4, and split permuted array into them
 		fpt.start();
@@ -88,8 +80,13 @@ public class Flow {
 		JButton resetB = new JButton("Reset");
 		resetB.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				waterdata.clear();
-				fp.repaint();
+				(new Thread(){
+					public void run(){
+						waterdata.clear();
+						fp.repaint();
+					}
+				}).start();
+				
 			}
 		});
 
@@ -99,7 +96,7 @@ public class Flow {
 				(new Thread() {
 					public void run() {
 						try {
-							paused.set(true);
+							Water.paused.set(true);
 							Thread.sleep(50);
 						} catch (Exception e) {
 							e.printStackTrace();
@@ -130,7 +127,7 @@ public class Flow {
 					rThread4.start();
 					started = true;
 				} else {
-					paused.set(false);// if they clicked on this button, it's evaluated to false again
+					Water.paused.set(false);// if they clicked on this button, it's evaluated to false again
 				}
 			}
 		});
@@ -146,6 +143,12 @@ public class Flow {
 				rThread3.isRunning.set(false);
 				rThread4.isRunning.set(false);
 				frame.dispose();
+				String sD = Water.startingDepth+"";
+				String eD = Water.endingDepth+"";
+				String bD = Water.basinDepth+"";
+				System.out.println("Total depth at start: +" + sD + "\nTotal depth run off: "
+						+ eD + "\nWater trapped in basins: " + bD);
+
 				System.exit(0);
 			}
 		});
@@ -154,14 +157,10 @@ public class Flow {
 											// that, it's also in a gross location
 
 		(new Thread() {
-			int counter = 0;
-
 			public void run() {
 				while (true) {
-					if (rThread1.done.get() & rThread2.done.get() & rThread3.done.get() & rThread4.done.get()) {
-						counterLabel.setText(counter+"");
-						counter++;//make atomic counter and update on each thread. This isn't accurate.
-					}
+					counterLabel.setText(Water.count.get() + "");
+					counterLabel.revalidate();
 				}
 			}
 		}).start();

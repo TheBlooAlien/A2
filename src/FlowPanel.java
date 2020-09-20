@@ -56,27 +56,7 @@ public class FlowPanel extends JPanel implements Runnable {//TODO inherit from T
 				g.drawImage(water.getImage(), 0, 0, null);
 			}
 		}
-	}
-	
-	private void allowPause(){
-		synchronized(lock) {
-			while(paused.get() == true){
-				try{
-					lock.wait();
-				}
-				catch(InterruptedException e){
-					e.printStackTrace();
-				}
-			}
-		}
-	}
-
-	public void unpause(){
-		synchronized(lock){
-			lock.notifyAll();
-		}
-	}
-	
+	}	
 	
 
 	// TODO: this should be controlled by the GUI

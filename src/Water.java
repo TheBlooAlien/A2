@@ -17,11 +17,17 @@ public class Water {
     private float[][] depth; // how many units of water in this grid point
     private float[][] height; // this height INCLUDES the water depth!
     static int loc[] = new int[2]; // locations yeilded from getPermute
+    static AtomicBoolean paused = new AtomicBoolean(false); // allowing for pausing which reflects throughout entire
+                                                            // programme
+    static AtomicInteger count = new AtomicInteger(0); // Counting number of steps in the searching and moving of water
     Terrain landdata;
     BufferedImage img;
     int blue = Color.BLUE.getRGB();
     Color transparent = new Color(0, 0, 0, 0.0f);
     int rgbTransparent = transparent.getRGB();
+    static float startingDepth = 0.0f;
+    static float endingDepth = 0.0f;
+    static float basinDepth = 0.0f;
 
     /**
      * Default constructor for Water class.
@@ -118,11 +124,12 @@ public class Water {
      * removing all water from the terrain and normalising the height values to
      * their original form. This clears the entire terrain.
      */
-    public void clear() { // clear whole grid
+    synchronized public void clear() { // clear whole grid
         for (int col = 0; col < dimx; col++) {
             for (int row = 0; row < dimy; row++) {
-                height[col][row] = height[col][row] - depth[col][row]; // makes sure the height goes back to normal
-                depth[col][row] = 0f; // clears of water, flows off edge
+                updateHeight(col, row, - depth[col][row]); // makes sure the height goes back to normal
+                basinDepth += depth[col][row];// TODO: This is broken
+                updateDepth(col,row, -depth[col][row]); // clears of water, flows off edge
                 img.setRGB(col, row, rgbTransparent);
             }
         }
@@ -139,16 +146,22 @@ public class Water {
      * @param y Y co-ord of click
      */
     public void addWater(int x, int y) { // water water to current point and its neighbours
-
+        int pointCount = 0;
         if (x > 3 && y > 3 && x < (dimx - 3) && y < (dimy - 3)) {// it won't run off the edge of the map: prevent
                                                                  // nullpointer
             // populating surrounding points and clicked point
             for (int xCoOrd = x - 3; xCoOrd < x + 4; xCoOrd++) {
                 for (int yCoOrd = y - 3; yCoOrd < y + 4; yCoOrd++) {
-                    updateDepth(xCoOrd, yCoOrd, 0.03f);// 3 units, or height of 0.03m is added to this grid point
-                    updateHeight(xCoOrd, yCoOrd, 0.03f); // 0.03m of height is added to the "terrain" height, so when
+                    pointCount++;
+                    depth[xCoOrd][yCoOrd] += 0.03f;// 3 units, or height of 0.03m is added to this grid point. Not
+                                                   // synchronised: not necessary
+                    height[xCoOrd][yCoOrd] += 0.03f; // 0.03m of height is added to the "terrain" height, so when
                     img.setRGB(xCoOrd, yCoOrd, blue);
                     // comparing the water height is also taken into consideration
+                    synchronized (this) {
+                        startingDepth = Float.sum(startingDepth, 0.03f);
+                       }
+
                 }
             }
         }
@@ -168,61 +181,63 @@ public class Water {
      * @param x Current cell's x co-ordinate
      * @param y Current cell's y co-ordinate
      */
-    public boolean checkNeighbours(int x, int y) {
-        // TODO: Change so it operates on different parts? Can't wait so long for lock
+    synchronized boolean checkNeighbours(int x, int y) {
         boolean success = false;
-        if (x != 0 & y != 0 & x != dimx - 1 & y != dimy - 1) {
-            synchronized (this) {
-                if (depth[x][y] != 0.0f) {// checking there's water here
-                    // ensuring we aren't dealing with bordering values here
+        if (x != 0 & y != 0 & x != dimx - 1 & y != dimy - 1) {// if not edge cell
+            if (depth[x][y] > 0) {// checking there's water here
+                // ensuring we aren't dealing with bordering values here
 
-                    int tempx = x; // temporary values for holding the current lowest neighbour calculated
-                    int tempy = y; // will be overwritten
-                    float tempval = height[x][y];
+                int tempx = x; // temporary values for holding the current lowest neighbour calculated
+                int tempy = y; // will be overwritten
+                float tempval = height[x][y];
 
-                    for (int col = x - 1; col < x + 2; col++) { // i = changing values of x
-                        // if current cell's height is taller than neighbour's height and neighbour's
-                        // height is smaller than current "smallest"
-                        if (height[x][y] > height[col][y - 1] & height[col][y - 1] < tempval) { // checking "upstairs"
-                            // neighbours
-                            tempx = col;
-                            tempy = y - 1; // current lowest height is stored in temp values
-                            tempval = height[col][y - 1];
-                        }
+                for (int col = x - 1; col < x + 2; col++) { // i = changing values of x
+                    // if current cell's height is taller than neighbour's height and neighbour's
+                    // height is smaller than current "smallest"
+                    if (height[x][y] > height[col][y - 1] & height[col][y - 1] < tempval) { // checking "upstairs"
+                        // neighbours
+                        tempx = col;
+                        tempy = y - 1; // current lowest height is stored in temp values
+                        tempval = height[col][y - 1];
                     }
+                }
 
-                    for (int col = x - 1; col < x + 2; col = col + 2) {// misses current co-ord
-                        if (height[x][y] > height[col][y] & height[col][y] < tempval) { // checking "nextdoor"
-                                                                                        // neighbours
-                            tempx = col;
-                            tempy = y; // current lowest height is stored in temp values
-                            tempval = height[col][y];
-                        }
+                for (int col = x - 1; col < x + 2; col = col + 2) {// misses current co-ord
+                    if (height[x][y] > height[col][y] & height[col][y] < tempval) { // checking "nextdoor"
+                                                                                    // neighbours
+                        tempx = col;
+                        tempy = y; // current lowest height is stored in temp values
+                        tempval = height[col][y];
                     }
+                }
 
-                    for (int col = x - 1; col < x + 2; col++) {
-                        if (height[x][y] > height[col][y + 1] & height[col][y + 1] < tempval) { // checking
-                                                                                                // "downstairs"
-                                                                                                // neighbours
-                            tempy = y + 1; // current lowest height is stored in temp values
-                            tempval = height[col][y + 1];
-                        }
+                for (int col = x - 1; col < x + 2; col++) {
+                    if (height[x][y] > height[col][y + 1] & height[col][y + 1] < tempval) { // checking
+                                                                                            // "downstairs"
+                                                                                            // neighbours
+                        tempy = y + 1; // current lowest height is stored in temp values
+                        tempval = height[col][y + 1];
                     }
+                }
 
-                    if (!(tempval == height[x][y])) {// the height has been updated
-                        success = true;
-                        moveWater(x, y, tempx, tempy); // water is added to the location of next lowest point
-                    } else { // the height wasn't updated, therefore no water was moved
-                        success = false;
-                    }
-                } else {
-                    img.setRGB(x, y, rgbTransparent);
-                    updateHeight(x, y, -(depth[x][y]));
-                    updateDepth(x, y, -(depth[x][y]));
+                if (!(tempval == height[x][y])) {// the height has been updated
+                    success = true;
+                    moveWater(x, y, tempx, tempy); // water is added to the location of next lowest point
+                } else { // the height wasn't updated, therefore no water was moved
+                    success = false;
                 }
             }
 
+        } // if edge cell, clear it
+        else {// this emulates the runoff
+            img.setRGB(x, y, rgbTransparent);
+                if (depth[x][y] != 0.0f) {
+                    endingDepth += depth[x][y]; // checking for accuracy
+                    updateHeight(x, y, -(depth[x][y]));
+                    updateDepth(x, y, -(depth[x][y]));
+                }
         }
+        count.incrementAndGet();
         return success;
 
     }
@@ -239,7 +254,7 @@ public class Water {
      * @param newY New grid cell's y co-ordinate
      */
     synchronized void moveWater(int x, int y, int newX, int newY) {
-        if (!(depth[x][y] == 0f)) { // ensures there's actually water here
+        if ((depth[x][y] > 0)) { // ensures there's actually water here
             updateDepth(x, y, -0.01f); // 0.01 is minused from current depth
             updateHeight(x, y, -0.01f); // the height value updated, because water is flowing out
             updateDepth(newX, newY, 0.01f); // water depth of new point updated
@@ -258,8 +273,8 @@ public class Water {
      * @param start Starting index to permute through array
      * @param end   Ending index of array permutation
      */
-    public void waterFlow(int start, int end) {
-        while (Flow.paused.get() == false) {
+    synchronized void waterFlow(int start, int end) {
+        while (paused.get() == false) {
             try {
                 Thread.sleep(50);
                 for (int i = start; i < end; i++) {
