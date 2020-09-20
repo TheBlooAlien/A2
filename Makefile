@@ -4,11 +4,12 @@ JAVAC=/usr/bin/javac
 SRCDIR=src
 BINDIR=bin
 DOCDIR=doc
+DATADIR=data
 
 $(BINDIR)/%.class:$(SRCDIR)/%.java
 	$(JAVAC) -d $(BINDIR)/ -cp $(BINDIR) $<
 
-CLASSES= Terrain.class Water.class FlowPanel.class Flow.class
+CLASSES= Terrain.class Water.class FlowPanel.class FlowThread.class Flow.class
 
 CLASS_FILES=$(CLASSES:%.class=$(BINDIR)/%.class)
 
@@ -17,8 +18,13 @@ default: $(CLASS_FILES)
 clean:
 	rm $(BINDIR)/*.class
 	rm $(SRCDIR)/*.class
-run:
-	@java -cp bin Flow
+runsmall:
+	@java -cp bin Flow "small_in.txt"
+runmed:
+	@java -cp bin Flow "medsample_in.txt"
+
+runlarge:
+	@java -cp bin Flow "largesample_in.txt"
 
 git:
 	git push origin master
