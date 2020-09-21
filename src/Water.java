@@ -128,7 +128,9 @@ public class Water {
         for (int col = 0; col < dimx; col++) {
             for (int row = 0; row < dimy; row++) {
                 updateHeight(col, row, - depth[col][row]); // makes sure the height goes back to normal
-                basinDepth += depth[col][row];// TODO: This is broken
+                /* Used to check for thread safety.
+                basinDepth += depth[col][row];
+                */
                 updateDepth(col,row, -depth[col][row]); // clears of water, flows off edge
                 img.setRGB(col, row, rgbTransparent);
             }
@@ -158,9 +160,12 @@ public class Water {
                     height[xCoOrd][yCoOrd] += 0.03f; // 0.03m of height is added to the "terrain" height, so when
                     img.setRGB(xCoOrd, yCoOrd, blue);
                     // comparing the water height is also taken into consideration
+                    
+                    /* Code used to test for thread safety.
                     synchronized (this) {
                         startingDepth = Float.sum(startingDepth, 0.03f);
                        }
+                    */
 
                 }
             }
@@ -232,7 +237,9 @@ public class Water {
         else {// this emulates the runoff
             img.setRGB(x, y, rgbTransparent);
                 if (depth[x][y] != 0.0f) {
-                    endingDepth += depth[x][y]; // checking for accuracy
+                    /* Used to check for thread safety.
+                    endingDepth += depth[x][y]; 
+                    */
                     updateHeight(x, y, -(depth[x][y]));
                     updateDepth(x, y, -(depth[x][y]));
                 }

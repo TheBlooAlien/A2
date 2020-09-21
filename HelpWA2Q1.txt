@@ -1,0 +1,92 @@
+
+______________________________________________________________________________________________________________
+
+/**
+     * Checks surrounding cell's neighbours heights to determine where water should flow next. If it is shorter, one unit of water is moved to the lowest neighbour. If this operation
+     * is a success, it returns true. If not, it returns false. This method will only work on current cells that are not on the border. If it it one cell away from the border, water
+     * can still be moved to a border cell, which will later be cleared with runOff(). This checks where water in the current cell should traverse next.
+     * @param x Current cell's x co-ordinate
+     * @param y Current cell's y co-ordinate
+     */
+public boolean checkNeighbours(int x, int y) {
+        boolean success = true;
+        if (!(x == 0 && y == 0 && x == dimx && y == dimy)) { // ensuring we aren't dealing with bordering values here
+            synchronized (this) {
+                if (paused == false) {
+                    int tempx = x; // temporary values for holding the current lowest neighbour calculated
+                    int tempy = y; // will be overwritten
+                    float tempval = height[x][y];
+
+                    for (int col = x - 1; col < x + 2; col++) { // i = changing values of x
+                        // if current cell's height is taller than neighbour's height and neighbour's
+                        // height is smaller than current "smallest"
+                        if (height[x][y] > height[col][y - 1] && height[col][y - 1] < tempval) { // checking "upstairs"
+                                                                                                 // neighbours
+                            tempx = col;
+                            tempy = y - 1; // current lowest height is stored in temp values
+                            tempval = height[col][y - 1];
+                        }
+                    }
+
+                    for (int col = x - 1; col < x + 2; col = col + 2) {// misses current co-ord
+                        if (height[x][y] > height[col][y] && height[col][y] < tempval) { // checking "nextdoor"
+                                                                                         // neighbours
+                            tempx = col;
+                            tempy = y; // current lowest height is stored in temp values
+                            tempval = height[col][y];
+                        }
+                    }
+
+                    for (int col = x - 1; col < x + 2; col++) {
+                        if (height[x][y] > height[col][y + 1] && height[col][y + 1] < tempval) { // checking
+                                                                                                 // "downstairs"
+                                                                                                 // neighbours
+                            tempx = col;
+                            tempy = y + 1; // current lowest height is stored in temp values
+                            tempval = height[col][y];
+                        }
+                    }
+
+                    if (!(tempval == height[x][y])) {// the height has been updated
+                        moveWater(x, y, tempx, tempy); // water is added to the location of next lowest point
+                    } else { // the height wasn't updated, therefore no water was moved
+                        success = false;
+                    }
+                }
+                else{ //ideally this will keep running until paused is false again
+                    while(paused == true){
+                        continue;
+                    }
+                }
+            }
+        }
+        return success;
+    }
+
+______________________________________________________________________________________________________________
+/**
+     * When it's been determined that a neighbouring grid point is lower down than the current 
+     * grid point, this method is called so that a unit of water can be moved to this neighbour
+     * from this point. 
+     * The entire method is synchronised to prevent bad interleavings.
+     * @param x Current grid cell's x co-ordinate
+     * @param y Current grid cell's y co-ordinate
+     * @param newX New grid cell's x co-ordinate
+     * @param newY New grid cell's y co-ordinate
+     */
+    synchronized void moveWater(int x, int y, int newX, int newY){
+        if(!(depth[x][y] == 0f)){ //ensures there's actually water here
+            updateDepth(x, y, -0.01f); //0.01 is minused from current depth
+            updateHeight(x, y, -0.01f); //the height value updated, because water is flowing out
+            updateDepth(newX, newY, 0.01f); //water depth of new point updated
+            updateHeight(newX, newY, 0.01f); //increase height of new gridpoint
+            
+            if(depth[x][y] == 0f){//after updating and it's zero now
+                img.setRGB(x,y, rgbTransparent);   
+            }
+        }   
+    }
+
+
+
+
